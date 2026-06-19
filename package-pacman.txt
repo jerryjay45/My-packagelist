@@ -49,7 +49,6 @@ aubio
 audit
 aurorae
 autoconf
-autofs-git
 automake
 avahi
 awesome-terminal-fonts
@@ -145,10 +144,8 @@ desktop-file-utils
 device-mapper
 dhclient
 diffutils
-digimend-kernel-drivers-dkms
 ding-libs
 discord
-discord-rpc
 discount
 discover
 djvulibre
@@ -283,7 +280,6 @@ gmp
 gnulib-l10n
 gnupg
 gnutls
-go-dsp-guitar-bin
 gobject-introspection-runtime
 gocryptfs
 google-glog
@@ -387,7 +383,6 @@ java-runtime-common
 jbig2dec
 jbigkit
 jdk-openjdk
-jellyfin-rpc
 jemalloc
 jfsutils
 jose
@@ -511,6 +506,7 @@ lcms2
 ldb
 leancrypto
 lensfun
+leptonica
 less
 lib2geom
 lib32-alsa-lib
@@ -537,7 +533,6 @@ lib32-glib2
 lib32-glibc
 lib32-gmp
 lib32-gnutls
-lib32-gtk2
 lib32-gtk3
 lib32-harfbuzz
 lib32-icu
@@ -663,6 +658,7 @@ libavtp
 libayatana-appindicator
 libayatana-indicator
 libb2
+libblake3
 libblockdev
 libblockdev-crypto
 libblockdev-fs
@@ -842,6 +838,7 @@ libosinfo
 libp11-kit
 libpagemaker
 libpaper
+libpathrs
 libpcap
 libpciaccess
 libpgm
@@ -881,7 +878,6 @@ libsm
 libsndfile
 libsodium
 libsonic
-libsoup
 libsoup3
 libsoxr
 libspectre
@@ -990,7 +986,6 @@ libzip
 libzmf
 licenses
 lilv
-linutil-bin
 linux-api-headers
 linux-cachyos
 linux-cachyos-headers
@@ -1041,8 +1036,6 @@ make
 man-db
 man-pages
 mangohud
-mcmojave-circle-icon-theme
-mcmojave-cursors
 md4c
 mdadm
 media-player-info
@@ -1068,7 +1061,6 @@ mlt
 mobile-broadband-provider-info
 modemmanager
 modemmanager-qt
-mojave-gtk-theme
 mpdecimal
 mpfr
 mpg123
@@ -1079,7 +1071,6 @@ mtdev
 mtools
 mujs
 multipath-tools
-multitail
 mypaint-brushes
 mypaint-brushes1
 nano
@@ -1265,7 +1256,6 @@ power-profiles-daemon
 powerdevil
 powertop
 ppp
-preloader-signed
 print-manager
 prison
 procps-ng
@@ -1304,7 +1294,6 @@ python-dbus
 python-defusedxml
 python-distro
 python-docutils
-python-exif
 python-filelock
 python-fonttools
 python-gobject
@@ -1333,7 +1322,6 @@ python-pillow
 python-pip
 python-pkg_resources
 python-platformdirs
-python-plum
 python-prettytable
 python-psutil
 python-pyaml
@@ -1416,7 +1404,6 @@ qt5-svg
 qt5-tools
 qt5-translations
 qt5-virtualkeyboard
-qt5-wayland-decorations
 qt5-webchannel
 qt5-webengine
 qt5-websockets
@@ -1471,7 +1458,6 @@ qtforkawesome-qt6
 qtkeychain-qt6
 qtutilities-qt6
 quazip-qt6
-qwhitesurgtkdecorations-qt6
 raptor
 rasqal
 rate-mirrors
@@ -1483,7 +1469,6 @@ readline
 rebuild-detector
 redland
 reflector
-renamemytvseries-qt-bin
 rhash
 ripgrep
 ripgrep-all
@@ -1508,7 +1493,6 @@ s-nail
 samba
 sbc
 sbsigntools
-sbupdate-git
 scour
 sd
 sdl12-compat
@@ -1593,6 +1577,9 @@ tcl
 tdb
 tela-icon-theme
 terminus-font
+tesseract
+tesseract-data-afr
+tesseract-data-osd
 tevent
 texinfo
 texlive-basic
@@ -1603,7 +1590,6 @@ texlive-latexrecommended
 texlive-pictures
 thin-provisioning-tools
 threadweaver
-times-newer-roman
 tinysparql
 tldr
 tmux
@@ -1808,9 +1794,6 @@ webkit2gtk-imgpaste
 webrtc-audio-processing-1
 wget
 which
-whitesur-gtk-theme
-whitesur-icon-theme
-whitesur-kde-theme
 wildmidi
 wine
 wireless-regdb
