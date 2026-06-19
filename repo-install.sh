@@ -1,56 +1,82 @@
 #!/bin/bash
+
 set -e
 
-REPO_URL="https://github.com/jerryjay45/My-packagelist.git"
-WORKDIR="/tmp/My-packagelist"
+PACMAN_FAILED="pacman-failed.txt"
+AUR_FAILED="aur-failed.txt"
 
+echo "Updating system..."
 sudo pacman -Syu --noconfirm
-sudo pacman -S --needed --noconfirm git curl base-devel
 
-# Clone package lists
-rm -rf "$WORKDIR"
-git clone "$REPO_URL" "$WORKDIR"
+echo "Installing prerequisites..."
+sudo pacman -S --needed --noconfirm git curl base-devel
 
 ####################################
 # Install CachyOS repo
 ####################################
-curl -fsSL https://mirror.cachyos.org/cachyos-repo.tar.xz | tar -xJ
-cd cachyos-repo
-chmod +x cachyos-repo.sh
-sudo ./cachyos-repo.sh
-cd ..
+if ! pacman -Sl cachyos >/dev/null 2>&1; then
+    echo "Installing CachyOS repositories..."
+
+    curl -fsSL https://mirror.cachyos.org/cachyos-repo.tar.xz | tar -xJ
+    cd cachyos-repo
+    chmod +x cachyos-repo.sh
+    sudo ./cachyos-repo.sh
+    cd ..
+fi
 
 ####################################
 # Install Chaotic-AUR repo
 ####################################
-sudo pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com
-sudo pacman-key --lsign-key 3056513887B78AEB
+if ! pacman -Sl chaotic-aur >/dev/null 2>&1; then
+    echo "Installing Chaotic-AUR..."
 
-sudo pacman -U --noconfirm \
-https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst \
-https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst
+    sudo pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com
+    sudo pacman-key --lsign-key 3056513887B78AEB
 
-if ! grep -q "\[chaotic-aur\]" /etc/pacman.conf; then
-sudo tee -a /etc/pacman.conf <<EOF
+    sudo pacman -U --noconfirm \
+        https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst \
+        https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst
 
-[chaotic-aur]
-Include = /etc/pacman.d/chaotic-mirrorlist
-EOF
+    if ! grep -q "\[chaotic-aur\]" /etc/pacman.conf; then
+        echo "" | sudo tee -a /etc/pacman.conf
+        echo "[chaotic-aur]" | sudo tee -a /etc/pacman.conf
+        echo "Include = /etc/pacman.d/chaotic-mirrorlist" | sudo tee -a /etc/pacman.conf
+    fi
 fi
 
 sudo pacman -Syy
 
-####################################
-# Install yay from Chaotic-AUR
-####################################
+echo "Installing yay..."
 sudo pacman -S --needed --noconfirm yay
 
-####################################
-# Install packages
-####################################
-cd "$WORKDIR"
+rm -f "$PACMAN_FAILED"
+rm -f "$AUR_FAILED"
 
-sudo pacman -S --needed $(< package-pacman.txt)
-yay -S --needed $(< aur-packages.txt)
+echo "Installing pacman packages..."
+
+while read -r pkg; do
+    [[ -z "$pkg" ]] && continue
+
+    if sudo pacman -S --needed --noconfirm "$pkg"; then
+        echo "Installed $pkg"
+    else
+        echo "$pkg" >> "$PACMAN_FAILED"
+    fi
+done < package-pacman.txt
+
+echo "Installing AUR packages..."
+
+while read -r pkg; do
+    [[ -z "$pkg" ]] && continue
+
+    if yay -S --needed --noconfirm "$pkg"; then
+        echo "Installed $pkg"
+    else
+        echo "$pkg" >> "$AUR_FAILED"
+    fi
+done < aur-packages.txt
 
 echo "Done."
+
+[[ -f "$PACMAN_FAILED" ]] && echo "Failed pacman packages logged to $PACMAN_FAILED"
+[[ -f "$AUR_FAILED" ]] && echo "Failed AUR packages logged to $AUR_FAILED"
