@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -uo pipefail
 
 PACMAN_FAILED="pacman-failed.txt"
 AUR_FAILED="aur-failed.txt"
@@ -18,10 +18,11 @@ if ! pacman -Sl cachyos >/dev/null 2>&1; then
     echo "Installing CachyOS repositories..."
 
     curl -fsSL https://mirror.cachyos.org/cachyos-repo.tar.xz | tar -xJ
-    cd cachyos-repo
+
+    cd cachyos-repo || exit 1
     chmod +x cachyos-repo.sh
     sudo ./cachyos-repo.sh
-    cd ..
+    cd .. || exit 1
 fi
 
 ####################################
@@ -37,46 +38,90 @@ if ! pacman -Sl chaotic-aur >/dev/null 2>&1; then
         https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst \
         https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst
 
-    if ! grep -q "\[chaotic-aur\]" /etc/pacman.conf; then
-        echo "" | sudo tee -a /etc/pacman.conf
-        echo "[chaotic-aur]" | sudo tee -a /etc/pacman.conf
-        echo "Include = /etc/pacman.d/chaotic-mirrorlist" | sudo tee -a /etc/pacman.conf
+    if ! grep -q "^\[chaotic-aur\]" /etc/pacman.conf; then
+        sudo tee -a /etc/pacman.conf >/dev/null <<EOF
+
+[chaotic-aur]
+Include = /etc/pacman.d/chaotic-mirrorlist
+EOF
     fi
 fi
 
+echo "Refreshing package databases..."
 sudo pacman -Syy
 
+####################################
+# Install yay from Chaotic-AUR
+####################################
 echo "Installing yay..."
 sudo pacman -S --needed --noconfirm yay
 
-rm -f "$PACMAN_FAILED"
-rm -f "$AUR_FAILED"
+rm -f "$PACMAN_FAILED" "$AUR_FAILED"
 
+####################################
+# Install pacman packages
+####################################
 echo "Installing pacman packages..."
 
-while read -r pkg; do
-    [[ -z "$pkg" ]] && continue
+if sudo pacman -S --needed --noconfirm $(< package-pacman.txt); then
+    echo "Pacman packages installed successfully."
+else
+    echo "Bulk pacman install failed."
+    echo "Retrying package-by-package..."
 
-    if sudo pacman -S --needed --noconfirm "$pkg"; then
-        echo "Installed $pkg"
-    else
-        echo "$pkg" >> "$PACMAN_FAILED"
-    fi
-done < package-pacman.txt
+    while read -r pkg; do
+        [[ -z "$pkg" || "$pkg" =~ ^# ]] && continue
 
+        if ! pacman -Qi "$pkg" &>/dev/null; then
+            if sudo pacman -S --needed --noconfirm "$pkg"; then
+                echo "Installed $pkg"
+            else
+                echo "$pkg" | tee -a "$PACMAN_FAILED"
+            fi
+        fi
+    done < package-pacman.txt
+fi
+
+####################################
+# Install AUR packages
+####################################
 echo "Installing AUR packages..."
 
-while read -r pkg; do
-    [[ -z "$pkg" ]] && continue
+if yay -S --needed --noconfirm $(< aur-packages.txt); then
+    echo "AUR packages installed successfully."
+else
+    echo "Bulk AUR install failed."
+    echo "Retrying package-by-package..."
 
-    if yay -S --needed --noconfirm "$pkg"; then
-        echo "Installed $pkg"
-    else
-        echo "$pkg" >> "$AUR_FAILED"
-    fi
-done < aur-packages.txt
+    while read -r pkg; do
+        [[ -z "$pkg" || "$pkg" =~ ^# ]] && continue
 
-echo "Done."
+        if ! pacman -Qi "$pkg" &>/dev/null; then
+            if yay -S --needed --noconfirm "$pkg"; then
+                echo "Installed $pkg"
+            else
+                echo "$pkg" | tee -a "$AUR_FAILED"
+            fi
+        fi
+    done < aur-packages.txt
+fi
 
-[[ -f "$PACMAN_FAILED" ]] && echo "Failed pacman packages logged to $PACMAN_FAILED"
-[[ -f "$AUR_FAILED" ]] && echo "Failed AUR packages logged to $AUR_FAILED"
+####################################
+# Summary
+####################################
+echo
+echo "Installation complete."
+
+if [[ -f "$PACMAN_FAILED" ]]; then
+    echo "Some pacman packages failed to install:"
+    cat "$PACMAN_FAILED"
+fi
+
+if [[ -f "$AUR_FAILED" ]]; then
+    echo "Some AUR packages failed to install:"
+    cat "$AUR_FAILED"
+fi
+
+if [[ ! -f "$PACMAN_FAILED" && ! -f "$AUR_FAILED" ]]; then
+    echo "All packages installed successfully."
+fi
