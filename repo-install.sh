@@ -31,17 +31,19 @@ RESET=$(tput sgr0)
 display_banner() {
 cat << "EOF"
 
-  __  __           _                    _
- |  \/  | ___ _ __| |__   __ _ _ __ | |_
- | |\/| |/ _ \ '__| '_ \ / _` | '_ \| __|
- | |  | |  __/ |  | | | | (_| | | | | |_
- |_|  |_|\___|_|  |_| |_|\__,_|_| |_|\__|
+       __                    
+      / /__  ____________  __
+ __  / / _ \/ ___/ ___/ / / /
+/ /_/ /  __/ /  / /  / /_/ / 
+\____/\___/_/  /_/   \__, /  
+                    /____/   
 
-  ____   ___  ____    ___           _        _ _
- |  _ \ / _ \/ ___|  |_ _|_ __  ___| |_ __ _| | | ___ _ __
- | |_) | | | \___ \   | || '_ \/ __| __/ _` | | |/ _ \ '__|
- |  __/| |_| |___) |  | || | | \__ \ || (_| | | |  __/ |
- |_|    \___/|____/  |___|_| |_|___/\__\__,_|_|_|\___|_|
+   ______                _                ____  _      
+  / ____/___ _____ ___  (_)___  ____ _   / __ \(_)___ _
+ / / __/ __ `/ __ `__ \/ / __ \/ __ `/  / /_/ / / __ `/
+/ /_/ / /_/ / / / / / / / / / / /_/ /  / _, _/ / /_/ / 
+\____/\__,_/_/ /_/ /_/_/_/ /_/\__, /  /_/ |_/_/\__, /  
+                             /____/           /____/   
 
 EOF
 }
@@ -58,8 +60,7 @@ GITHUB_RAW="https://raw.githubusercontent.com/jerryjay45/My-packagelist/main"
 PACMAN_LIST_URL="$GITHUB_RAW/package-pacman.txt"
 AUR_LIST_URL="$GITHUB_RAW/aur-packages.txt"
 
-PACMAN_FAILED_LOG="pacman-failed.txt"
-AUR_FAILED_LOG="aur-failed.txt"
+FAILED_LOG="failed-packages.txt"
 
 # --- Helper functions (JaKooLit style) ---
 colorize_prompt() {
@@ -86,7 +87,7 @@ echo "${NOTE} This script will:"
 echo "  1. Update your system"
 echo "  2. Set up CachyOS + Chaotic-AUR repositories"
 echo "  3. Install yay (if not present)"
-echo "  4. Install all packages from your GitHub package lists"
+echo "  4. Install all packages from your GitHub package lists via yay"
 echo ""
 read -p "$(colorize_prompt "$CAT" "Would you like to proceed? (y/n): ")" proceed
 if [[ "$proceed" != "y" && "$proceed" != "Y" ]]; then
@@ -104,16 +105,7 @@ ask_yes_no "Install yay if not already installed?" install_yay
 printf "\n"
 
 # ============================================================
-# STEP 1 - System Update
-# ============================================================
-echo ""
-echo "${INFO} Updating system..." | tee -a "$LOG"
-sudo pacman -Syu --noconfirm 2>&1 | tee -a "$LOG"
-echo "${OK} System updated." | tee -a "$LOG"
-sleep 1
-
-# ============================================================
-# STEP 2 - Install yay
+# STEP 1 - Install yay (needs git/base-devel first, no repo setup needed)
 # ============================================================
 if [[ "$install_yay" == "Y" ]]; then
     if ! command -v yay &>/dev/null; then
@@ -197,7 +189,16 @@ echo "${OK} pacman.conf is valid." | tee -a "$LOG"
 sleep 1
 
 # ============================================================
-# STEP 6 - Fetch Package Lists
+# STEP 6 - System Update (after repos are confirmed working)
+# ============================================================
+echo ""
+echo "${INFO} Updating system..." | tee -a "$LOG"
+sudo pacman -Syu --noconfirm 2>&1 | tee -a "$LOG"
+echo "${OK} System updated." | tee -a "$LOG"
+sleep 1
+
+# ============================================================
+# STEP 7 - Fetch Package Lists
 # ============================================================
 echo ""
 echo "${INFO} Fetching package lists from GitHub..." | tee -a "$LOG"
@@ -207,73 +208,48 @@ if [[ -z "$PACMAN_PACKAGES" ]]; then
     echo "${ERROR} Failed to fetch pacman package list. Check your internet or repo URL." | tee -a "$LOG"
     exit 1
 fi
-PACMAN_COUNT=$(echo "$PACMAN_PACKAGES" | wc -l)
-echo "${OK} Fetched $PACMAN_COUNT pacman packages." | tee -a "$LOG"
 
 AUR_PACKAGES=$(curl -fsSL "$AUR_LIST_URL" | grep -v '^\s*#' | grep -v '^\s*$')
 if [[ -z "$AUR_PACKAGES" ]]; then
     echo "${ERROR} Failed to fetch AUR package list. Check your internet or repo URL." | tee -a "$LOG"
     exit 1
 fi
-AUR_COUNT=$(echo "$AUR_PACKAGES" | wc -l)
-echo "${OK} Fetched $AUR_COUNT AUR packages." | tee -a "$LOG"
 
-> "$PACMAN_FAILED_LOG"
-> "$AUR_FAILED_LOG"
+# Combine both lists
+ALL_PACKAGES=$(printf "%s\n%s" "$PACMAN_PACKAGES" "$AUR_PACKAGES" | grep -v '^\s*$')
+TOTAL_COUNT=$(echo "$ALL_PACKAGES" | wc -l)
+echo "${OK} Fetched $TOTAL_COUNT packages total (pacman + AUR)." | tee -a "$LOG"
+
+> "$FAILED_LOG"
 sleep 1
 
 # ============================================================
-# STEP 6 - Install Pacman Packages
+# STEP 8 - Install All Packages via yay
 # ============================================================
 echo ""
-echo "${INFO} Installing pacman packages ($PACMAN_COUNT total)..." | tee -a "$LOG"
+echo "${INFO} Installing all packages via yay ($TOTAL_COUNT total)..." | tee -a "$LOG"
 
-PACMAN_INSTALLED=0
-PACMAN_FAILED=0
+INSTALLED=0
+FAILED=0
+CURRENT=0
 
 while IFS= read -r pkg; do
     [[ -z "$pkg" ]] && continue
-    echo -n "${INFO} Installing ${CYAN}$pkg${RESET}... "
-    if sudo pacman -S --needed --noconfirm "$pkg" >> "$LOG" 2>&1; then
-        echo "${OK}"
-        PACMAN_INSTALLED=$((PACMAN_INSTALLED + 1))
-    else
-        echo "${ERROR}"
-        echo "$pkg" >> "$PACMAN_FAILED_LOG"
-        PACMAN_FAILED=$((PACMAN_FAILED + 1))
-    fi
-done <<< "$PACMAN_PACKAGES"
-
-echo ""
-echo "${OK} Pacman: ${GREEN}$PACMAN_INSTALLED installed${RESET} | ${RED}$PACMAN_FAILED failed${RESET}" | tee -a "$LOG"
-[[ $PACMAN_FAILED -gt 0 ]] && echo "${WARN} Failed packages logged to: $PACMAN_FAILED_LOG" | tee -a "$LOG"
-sleep 1
-
-# ============================================================
-# STEP 7 - Install AUR Packages
-# ============================================================
-echo ""
-echo "${INFO} Installing AUR packages ($AUR_COUNT total)..." | tee -a "$LOG"
-
-AUR_INSTALLED=0
-AUR_FAILED=0
-
-while IFS= read -r pkg; do
-    [[ -z "$pkg" ]] && continue
-    echo -n "${INFO} Installing ${MAGENTA}$pkg${RESET} (AUR)... "
+    CURRENT=$((CURRENT + 1))
+    echo -n "${INFO} [$CURRENT/$TOTAL_COUNT] Installing ${CYAN}$pkg${RESET}... "
     if yay -S --needed --noconfirm "$pkg" >> "$LOG" 2>&1; then
         echo "${OK}"
-        AUR_INSTALLED=$((AUR_INSTALLED + 1))
+        INSTALLED=$((INSTALLED + 1))
     else
         echo "${ERROR}"
-        echo "$pkg" >> "$AUR_FAILED_LOG"
-        AUR_FAILED=$((AUR_FAILED + 1))
+        echo "$pkg" >> "$FAILED_LOG"
+        FAILED=$((FAILED + 1))
     fi
-done <<< "$AUR_PACKAGES"
+done <<< "$ALL_PACKAGES"
 
 echo ""
-echo "${OK} AUR: ${GREEN}$AUR_INSTALLED installed${RESET} | ${RED}$AUR_FAILED failed${RESET}" | tee -a "$LOG"
-[[ $AUR_FAILED -gt 0 ]] && echo "${WARN} Failed packages logged to: $AUR_FAILED_LOG" | tee -a "$LOG"
+echo "${OK} ${GREEN}$INSTALLED installed${RESET} | ${RED}$FAILED failed${RESET}" | tee -a "$LOG"
+[[ $FAILED -gt 0 ]] && echo "${WARN} Failed packages logged to: $FAILED_LOG" | tee -a "$LOG"
 
 # ============================================================
 # DONE
@@ -281,18 +257,17 @@ echo "${OK} AUR: ${GREEN}$AUR_INSTALLED installed${RESET} | ${RED}$AUR_FAILED fa
 clear
 printf "\n${OK} ${GREEN}Yey! Installation Completed.${RESET}\n\n"
 
-echo "  Pacman : ${GREEN}$PACMAN_INSTALLED installed${RESET}  |  ${RED}$PACMAN_FAILED failed${RESET}"
-echo "  AUR    : ${GREEN}$AUR_INSTALLED installed${RESET}  |  ${RED}$AUR_FAILED failed${RESET}"
+echo "  Total  : ${GREEN}$INSTALLED installed${RESET}  |  ${RED}$FAILED failed${RESET}"
 echo ""
 
-if [[ -s "$PACMAN_FAILED_LOG" ]] || [[ -s "$AUR_FAILED_LOG" ]]; then
-    echo "${WARN} Some packages failed to install. Review the logs:"
-    [[ -s "$PACMAN_FAILED_LOG" ]] && echo "  → $PACMAN_FAILED_LOG"
-    [[ -s "$AUR_FAILED_LOG"   ]] && echo "  → $AUR_FAILED_LOG"
+if [[ -s "$FAILED_LOG" ]]; then
+    echo "${WARN} Some packages failed to install. Review the log:"
+    echo "  → $FAILED_LOG"
     echo ""
 fi
 
-echo "${NOTE} Full install log saved to: ${YELLOW}$LOG${RESET}"
+echo "${NOTE} Full install log: ${YELLOW}$LOG${RESET}"
+[[ -s "$FAILED_LOG" ]] && echo "${NOTE} Failed packages:  ${YELLOW}$FAILED_LOG${RESET}"
 echo ""
 read -n1 -rep "${CAT} Would you like to reboot now? (y/n): " REBOOT
 if [[ $REBOOT =~ ^[Yy]$ ]]; then
