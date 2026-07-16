@@ -29,10 +29,6 @@ appstream
 appstream-qt
 apr
 apr-util
-arch-install-scripts
-archinstall
-archlinux-appstream-data
-archlinux-keyring
 ardour
 argon2
 aria2
@@ -96,8 +92,6 @@ cava
 cblas
 cdparanoia
 cfitsio
-chaotic-keyring
-chaotic-mirrorlist
 char-white
 chromaprint
 chromium
