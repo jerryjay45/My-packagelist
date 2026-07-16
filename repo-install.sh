@@ -132,15 +132,47 @@ if [[ "$setup_cachyos" == "Y" ]]; then
     if grep -q "\[cachyos\]" /etc/pacman.conf 2>/dev/null; then
         echo "${WARN} CachyOS repositories already present — skipping." | tee -a "$LOG"
     else
-        echo "${INFO} Downloading CachyOS repo-add script..." | tee -a "$LOG"
-        curl -o /tmp/cachyos-repo-add.sh https://mirror.cachyos.org/cachyos-repo-add.sh 2>&1 | tee -a "$LOG"
-        if [[ ! -f /tmp/cachyos-repo-add.sh ]]; then
-            echo "${ERROR} Failed to download CachyOS repo-add script. Skipping." | tee -a "$LOG"
+        echo "${INFO} Installing CachyOS keyring and mirrorlists..." | tee -a "$LOG"
+
+        # Receive and sign the CachyOS key
+        sudo pacman-key --recv-keys F3B607488DB35A47 --keyserver keyserver.ubuntu.com 2>&1 | tee -a "$LOG"
+        sudo pacman-key --lsign-key F3B607488DB35A47 2>&1 | tee -a "$LOG"
+
+        # Fetch the latest package filenames dynamically from the mirror
+        CACHYOS_MIRROR="https://mirror.cachyos.org/repo/x86_64/cachyos"
+        KEYRING=$(curl -fsSL "$CACHYOS_MIRROR/" | grep -oP 'cachyos-keyring-[^"]+\.pkg\.tar\.zst' | head -1)
+        MIRRORLIST=$(curl -fsSL "$CACHYOS_MIRROR/" | grep -oP 'cachyos-mirrorlist-[^"]+\.pkg\.tar\.zst' | head -1)
+        MIRRORLIST_V3=$(curl -fsSL "$CACHYOS_MIRROR/" | grep -oP 'cachyos-v3-mirrorlist-[^"]+\.pkg\.tar\.zst' | head -1)
+        MIRRORLIST_V4=$(curl -fsSL "$CACHYOS_MIRROR/" | grep -oP 'cachyos-v4-mirrorlist-[^"]+\.pkg\.tar\.zst' | head -1)
+
+        if [[ -z "$KEYRING" || -z "$MIRRORLIST" || -z "$MIRRORLIST_V3" || -z "$MIRRORLIST_V4" ]]; then
+            echo "${ERROR} Could not resolve CachyOS package filenames from mirror. Skipping." | tee -a "$LOG"
         else
-            chmod +x /tmp/cachyos-repo-add.sh
-            sudo /tmp/cachyos-repo-add.sh 2>&1 | tee -a "$LOG"
-            rm -f /tmp/cachyos-repo-add.sh
-            echo "${OK} CachyOS repositories added." | tee -a "$LOG"
+            echo "${INFO} Found: $KEYRING $MIRRORLIST $MIRRORLIST_V3 $MIRRORLIST_V4" | tee -a "$LOG"
+            sudo pacman -U --noconfirm \
+                "$CACHYOS_MIRROR/$KEYRING" \
+                "$CACHYOS_MIRROR/$MIRRORLIST" \
+                "$CACHYOS_MIRROR/$MIRRORLIST_V3" \
+                "$CACHYOS_MIRROR/$MIRRORLIST_V4" 2>&1 | tee -a "$LOG"
+
+            # Add repos to pacman.conf if install succeeded
+            if [[ $? -eq 0 ]]; then
+                cat <<'EOF' | sudo tee -a /etc/pacman.conf > /dev/null
+
+[cachyos-v4]
+Include = /etc/pacman.d/cachyos-v4-mirrorlist
+
+[cachyos-v3]
+Include = /etc/pacman.d/cachyos-v3-mirrorlist
+
+[cachyos]
+Include = /etc/pacman.d/cachyos-mirrorlist
+EOF
+                sudo pacman -Sy 2>&1 | tee -a "$LOG"
+                echo "${OK} CachyOS repositories added." | tee -a "$LOG"
+            else
+                echo "${ERROR} CachyOS package install failed. Skipping pacman.conf changes." | tee -a "$LOG"
+            fi
         fi
     fi
 fi
