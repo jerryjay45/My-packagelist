@@ -140,28 +140,16 @@ if [[ "$setup_cachyos" == "Y" ]]; then
     if grep -q "\[cachyos\]" /etc/pacman.conf 2>/dev/null; then
         echo "${WARN} CachyOS repositories already present — skipping." | tee -a "$LOG"
     else
-        sudo pacman-key --recv-keys F3B607488DB35A47 --keyserver keyserver.ubuntu.com 2>&1 | tee -a "$LOG"
-        sudo pacman-key --lsign-key F3B607488DB35A47 2>&1 | tee -a "$LOG"
-        sudo pacman -U --noconfirm \
-            'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-keyring-20240331-1-any.pkg.tar.zst' \
-            'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-mirrorlist-18-1-any.pkg.tar.zst' \
-            'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v3-mirrorlist-18-1-any.pkg.tar.zst' \
-            'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v4-mirrorlist-6-1-any.pkg.tar.zst' \
-            'https://mirror.cachyos.org/repo/x86_64/cachyos/pacman-6.1.0-7-x86_64.pkg.tar.zst' 2>&1 | tee -a "$LOG"
-
-        cat <<'EOF' | sudo tee -a /etc/pacman.conf > /dev/null
-
-[cachyos-v4]
-Include = /etc/pacman.d/cachyos-v4-mirrorlist
-
-[cachyos-v3]
-Include = /etc/pacman.d/cachyos-v3-mirrorlist
-
-[cachyos]
-Include = /etc/pacman.d/cachyos-mirrorlist
-EOF
-        sudo pacman -Sy 2>&1 | tee -a "$LOG"
-        echo "${OK} CachyOS repositories added." | tee -a "$LOG"
+        echo "${INFO} Downloading CachyOS repo-add script..." | tee -a "$LOG"
+        curl -o /tmp/cachyos-repo-add.sh https://mirror.cachyos.org/cachyos-repo-add.sh 2>&1 | tee -a "$LOG"
+        if [[ ! -f /tmp/cachyos-repo-add.sh ]]; then
+            echo "${ERROR} Failed to download CachyOS repo-add script. Skipping." | tee -a "$LOG"
+        else
+            chmod +x /tmp/cachyos-repo-add.sh
+            sudo /tmp/cachyos-repo-add.sh 2>&1 | tee -a "$LOG"
+            rm -f /tmp/cachyos-repo-add.sh
+            echo "${OK} CachyOS repositories added." | tee -a "$LOG"
+        fi
     fi
 fi
 sleep 1
@@ -177,23 +165,39 @@ if [[ "$setup_chaotic" == "Y" ]]; then
     else
         sudo pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com 2>&1 | tee -a "$LOG"
         sudo pacman-key --lsign-key 3056513887B78AEB 2>&1 | tee -a "$LOG"
-        sudo pacman -U --noconfirm \
+        if sudo pacman -U --noconfirm \
             'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' \
-            'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst' 2>&1 | tee -a "$LOG"
+            'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst' 2>&1 | tee -a "$LOG"; then
 
-        cat <<'EOF' | sudo tee -a /etc/pacman.conf > /dev/null
+            cat <<'EOF' | sudo tee -a /etc/pacman.conf > /dev/null
 
 [chaotic-aur]
 Include = /etc/pacman.d/chaotic-mirrorlist
 EOF
-        sudo pacman -Sy 2>&1 | tee -a "$LOG"
-        echo "${OK} Chaotic-AUR repository added." | tee -a "$LOG"
+            sudo pacman -Sy 2>&1 | tee -a "$LOG"
+            echo "${OK} Chaotic-AUR repository added." | tee -a "$LOG"
+        else
+            echo "${ERROR} Failed to install Chaotic-AUR keyring/mirrorlist. Skipping to avoid breaking pacman.conf." | tee -a "$LOG"
+        fi
     fi
 fi
 sleep 1
 
 # ============================================================
-# STEP 5 - Fetch Package Lists
+# STEP 5 - Sanity Check pacman.conf
+# ============================================================
+echo ""
+echo "${INFO} Verifying pacman.conf is valid..." | tee -a "$LOG"
+if ! sudo pacman -Sy --noconfirm > /dev/null 2>&1; then
+    echo "${ERROR} pacman.conf appears broken — likely a missing mirrorlist file." | tee -a "$LOG"
+    echo "${NOTE} Check /etc/pacman.conf and remove any repo entries whose Include files don't exist." | tee -a "$LOG"
+    exit 1
+fi
+echo "${OK} pacman.conf is valid." | tee -a "$LOG"
+sleep 1
+
+# ============================================================
+# STEP 6 - Fetch Package Lists
 # ============================================================
 echo ""
 echo "${INFO} Fetching package lists from GitHub..." | tee -a "$LOG"
