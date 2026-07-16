@@ -604,7 +604,6 @@ lib32-libxv
 lib32-libxxf86vm
 lib32-llvm-libs
 lib32-lm_sensors
-lib32-mesa-tkg-git
 lib32-ncurses
 lib32-nettle
 lib32-nspr
@@ -1040,7 +1039,6 @@ md4c
 mdadm
 media-player-info
 meld
-mesa-tkg-git
 mesa-utils
 meson
 micro
