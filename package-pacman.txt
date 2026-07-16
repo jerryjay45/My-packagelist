@@ -172,9 +172,6 @@ efitools
 efivar
 egl-wayland
 eglexternalplatform
-electron36
-electron39
-electron41
 elfutils
 ell
 enchant
