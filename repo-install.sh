@@ -104,6 +104,31 @@ printf "\n"
 ask_yes_no "Install yay if not already installed?" install_yay
 printf "\n"
 
+# --- Ask package list source ---
+echo "${CAT} Where should the package lists be loaded from?"
+echo "  1) GitHub (fetch latest from repo)"
+echo "  2) Local  (use lists in this cloned directory)"
+while true; do
+    read -p "$(colorize_prompt "$CAT" "Enter 1 or 2: ")" list_source
+    case "$list_source" in
+        1) USE_LOCAL="N"; break ;;
+        2) USE_LOCAL="Y"; break ;;
+        *) echo "Please enter 1 or 2." ;;
+    esac
+done
+printf "\n"
+
+# If local, verify the files exist next to the script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ "$USE_LOCAL" == "Y" ]]; then
+    if [[ ! -f "$SCRIPT_DIR/package-pacman.txt" || ! -f "$SCRIPT_DIR/aur-packages.txt" ]]; then
+        echo "${ERROR} Local package lists not found in $SCRIPT_DIR" | tee -a "$LOG"
+        echo "${NOTE} Make sure package-pacman.txt and aur-packages.txt are in the same folder as this script." | tee -a "$LOG"
+        exit 1
+    fi
+    echo "${OK} Using local package lists from: $SCRIPT_DIR" | tee -a "$LOG"
+fi
+
 # ============================================================
 # STEP 1 - Install yay (needs git/base-devel first, no repo setup needed)
 # ============================================================
@@ -230,20 +255,27 @@ echo "${OK} System updated." | tee -a "$LOG"
 sleep 1
 
 # ============================================================
-# STEP 7 - Fetch Package Lists
+# STEP 7 - Load Package Lists (GitHub or Local)
 # ============================================================
 echo ""
-echo "${INFO} Fetching package lists from GitHub..." | tee -a "$LOG"
 
-PACMAN_PACKAGES=$(curl -fsSL "$PACMAN_LIST_URL" | grep -v '^\s*#' | grep -v '^\s*$')
+if [[ "$USE_LOCAL" == "Y" ]]; then
+    echo "${INFO} Loading package lists from local directory..." | tee -a "$LOG"
+    PACMAN_PACKAGES=$(grep -v '^\s*#' "$SCRIPT_DIR/package-pacman.txt" | grep -v '^\s*$')
+    AUR_PACKAGES=$(grep -v '^\s*#' "$SCRIPT_DIR/aur-packages.txt" | grep -v '^\s*$')
+else
+    echo "${INFO} Fetching package lists from GitHub..." | tee -a "$LOG"
+    PACMAN_PACKAGES=$(curl -fsSL "$PACMAN_LIST_URL" | grep -v '^\s*#' | grep -v '^\s*$')
+    AUR_PACKAGES=$(curl -fsSL "$AUR_LIST_URL" | grep -v '^\s*#' | grep -v '^\s*$')
+fi
+
 if [[ -z "$PACMAN_PACKAGES" ]]; then
-    echo "${ERROR} Failed to fetch pacman package list. Check your internet or repo URL." | tee -a "$LOG"
+    echo "${ERROR} Failed to load pacman package list." | tee -a "$LOG"
     exit 1
 fi
 
-AUR_PACKAGES=$(curl -fsSL "$AUR_LIST_URL" | grep -v '^\s*#' | grep -v '^\s*$')
 if [[ -z "$AUR_PACKAGES" ]]; then
-    echo "${ERROR} Failed to fetch AUR package list. Check your internet or repo URL." | tee -a "$LOG"
+    echo "${ERROR} Failed to load AUR package list." | tee -a "$LOG"
     exit 1
 fi
 
