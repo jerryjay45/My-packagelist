@@ -1,4 +1,5 @@
 a52dec
+ani-cli
 accountsservice
 adwaita-cursors
 adwaita-fonts
@@ -586,6 +587,7 @@ vlc-plugins-video-output
 vlc-plugins-visualization
 vulkan-icd-loader
 wayland
+webapp-manager
 wget
 which
 whitesur-gtk-theme
