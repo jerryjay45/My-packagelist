@@ -88,6 +88,7 @@ echo "  1. Update your system"
 echo "  2. Set up CachyOS + Chaotic-AUR repositories"
 echo "  3. Install yay (if not present)"
 echo "  4. Install all packages from your GitHub package lists via yay"
+echo "  5. (Optional) Set up DaVinci Resolve with Rusticl OpenCL for AMD Polaris GPUs"
 echo ""
 read -p "$(colorize_prompt "$CAT" "Would you like to proceed? (y/n): ")" proceed
 if [[ "$proceed" != "y" && "$proceed" != "Y" ]]; then
@@ -102,6 +103,8 @@ printf "\n"
 ask_yes_no "Set up Chaotic-AUR repository?" setup_chaotic
 printf "\n"
 ask_yes_no "Install yay if not already installed?" install_yay
+printf "\n"
+ask_yes_no "Set up DaVinci Resolve (AMD Rusticl OpenCL fix for Polaris GPUs)?" setup_resolve
 printf "\n"
 
 # --- Ask package list source ---
@@ -314,6 +317,82 @@ done <<< "$ALL_PACKAGES"
 echo ""
 echo "${OK} ${GREEN}$INSTALLED installed${RESET} | ${RED}$FAILED failed${RESET}" | tee -a "$LOG"
 [[ $FAILED -gt 0 ]] && echo "${WARN} Failed packages logged to: $FAILED_LOG" | tee -a "$LOG"
+
+# ============================================================
+# STEP 9 - DaVinci Resolve (Rusticl OpenCL fix for AMD Polaris GPUs)
+# ============================================================
+if [[ "$setup_resolve" == "Y" ]]; then
+    echo ""
+    echo "${INFO} Setting up DaVinci Resolve with Rusticl OpenCL support..." | tee -a "$LOG"
+
+    RUSTICL_DRIVER="radeonsi"   # change to "iris" for Intel, "nouveau" for older NVIDIA open-source
+
+    # --- Rusticl OpenCL stack ---
+    echo "${INFO} Installing opencl-mesa and ocl-icd..." | tee -a "$LOG"
+    sudo pacman -S --needed --noconfirm opencl-mesa ocl-icd 2>&1 | tee -a "$LOG"
+
+    # --- Remove conflicting ROCm OpenCL runtime, if present ---
+    if pacman -Qi rocm-opencl-runtime &>/dev/null; then
+        echo "${WARN} rocm-opencl-runtime detected — removing (conflicts with Rusticl on pre-Vega GPUs)." | tee -a "$LOG"
+        sudo pacman -R --noconfirm rocm-opencl-runtime 2>&1 | tee -a "$LOG"
+    else
+        echo "${OK} rocm-opencl-runtime not installed, nothing to remove." | tee -a "$LOG"
+    fi
+
+    # --- Add user to render/video groups ---
+    echo "${INFO} Ensuring $USER is in render and video groups..." | tee -a "$LOG"
+    sudo usermod -aG render,video "$USER" 2>&1 | tee -a "$LOG"
+
+    # --- Install davinci-resolve + checker from AUR ---
+    if command -v yay &>/dev/null; then
+        if ! pacman -Qi davinci-resolve &>/dev/null; then
+            echo "${INFO} Installing davinci-resolve from AUR..." | tee -a "$LOG"
+            yay -S --needed --noconfirm davinci-resolve 2>&1 | tee -a "$LOG"
+        else
+            echo "${OK} davinci-resolve already installed." | tee -a "$LOG"
+        fi
+
+        if ! pacman -Qi davinci-resolve-checker &>/dev/null; then
+            echo "${INFO} Installing davinci-resolve-checker from AUR..." | tee -a "$LOG"
+            yay -S --needed --noconfirm davinci-resolve-checker 2>&1 | tee -a "$LOG"
+        else
+            echo "${OK} davinci-resolve-checker already installed." | tee -a "$LOG"
+        fi
+    else
+        echo "${ERROR} yay not found — cannot install davinci-resolve/davinci-resolve-checker from AUR." | tee -a "$LOG"
+        echo "${NOTE} Re-run this script with the yay install step enabled, then re-run this step." | tee -a "$LOG"
+    fi
+
+    # --- Patch the .desktop launcher to always set RUSTICL_ENABLE ---
+    SYSTEM_DESKTOP=$(find /usr/share/applications /opt -maxdepth 4 -iname "*resolve*.desktop" 2>/dev/null | head -n1 || true)
+    USER_APPS_DIR="$HOME/.local/share/applications"
+    USER_DESKTOP="$USER_APPS_DIR/davinci-resolve.desktop"
+
+    if [[ -n "$SYSTEM_DESKTOP" ]]; then
+        mkdir -p "$USER_APPS_DIR"
+        cp "$SYSTEM_DESKTOP" "$USER_DESKTOP"
+        if ! grep -q "RUSTICL_ENABLE=" "$USER_DESKTOP"; then
+            sed -i -E "s|^Exec=(.*)|Exec=env RUSTICL_ENABLE=${RUSTICL_DRIVER} \1|" "$USER_DESKTOP"
+            echo "${OK} Patched launcher to export RUSTICL_ENABLE=${RUSTICL_DRIVER}: $USER_DESKTOP" | tee -a "$LOG"
+        else
+            echo "${OK} Launcher already has RUSTICL_ENABLE set." | tee -a "$LOG"
+        fi
+    else
+        echo "${WARN} Could not auto-locate a DaVinci Resolve .desktop file." | tee -a "$LOG"
+        echo "${NOTE} Launch manually with: RUSTICL_ENABLE=${RUSTICL_DRIVER} davinci-resolve" | tee -a "$LOG"
+    fi
+
+    # --- Verify OpenCL sees the GPU ---
+    if command -v clinfo &>/dev/null; then
+        echo "${INFO} Verifying Rusticl device detection..." | tee -a "$LOG"
+        RUSTICL_ENABLE="$RUSTICL_DRIVER" clinfo 2>&1 | grep -E "Platform Name|Number of devices|Device Name" | tee -a "$LOG"
+    else
+        echo "${NOTE} Install clinfo (sudo pacman -S clinfo) to verify GPU detection manually." | tee -a "$LOG"
+    fi
+
+    echo "${OK} DaVinci Resolve setup complete. Log out/in for group changes to take effect." | tee -a "$LOG"
+fi
+sleep 1
 
 # ============================================================
 # DONE
