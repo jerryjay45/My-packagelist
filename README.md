@@ -98,6 +98,8 @@ It reports every package that is in neither the sync repos nor the AUR, and exit
 
 - It targets an **AMD GPU**: it includes `mesa`, `vulkan-radeon` and `lib32-vulkan-radeon` (Steam needs a 32-bit Vulkan driver), plus `xf86-video-amdgpu`, `amdgpu_top` and `lact-git`. Swap these for the right driver packages on NVIDIA or Intel.
 - The kernel (`linux-cachyos` and `linux-cachyos-headers`) is in the list, so the **CachyOS repositories must be enabled** for it to install. If they aren't, the script skips those packages with a warning (and lists them in `failed-packages.txt`) instead of trying to build a kernel from the AUR. If you use a different kernel, remove those two lines. When a DKMS package is in the list, the script also installs the `-headers` package for every kernel that is already installed.
+- `intel-ucode` is Intel-specific CPU microcode. On an AMD CPU, replace it with `amd-ucode`. Microcode is only loaded if your bootloader is set up for it (with GRUB, regenerate the config afterwards: `sudo grub-mkconfig -o /boot/grub/grub.cfg`).
+- `plymouth` only installs the package. For a boot splash you still need to add the `plymouth` hook to `/etc/mkinitcpio.conf`, add `splash` to the kernel command line, and pick a theme.
 - `plasma-login-manager` is the display manager (KDE's replacement for SDDM).
 - The virtualization set (`libvirt`, `virt-manager`, `virt-install`, `qemu-desktop`, `edk2-ovmf`, `dnsmasq`, `virtiofsd`) only installs the packages. Enable the service (`sudo systemctl enable --now libvirtd.socket`) and add yourself to the `libvirt` group yourself.
 - The `mingw-w64-*` cross-compiler packages are AUR packages. They come prebuilt with Chaotic-AUR; without it `yay` compiles them, and `mingw-w64-gcc` takes a long time.

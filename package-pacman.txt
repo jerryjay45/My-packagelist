@@ -113,6 +113,7 @@ fzf
 gamemode
 gamescope
 gawk
+ghostty
 gimp
 gimp-plugin-gmic
 git
@@ -150,6 +151,7 @@ hwinfo
 iana-etc
 inetutils
 inkscape
+intel-ucode
 inter-font
 iproute2
 iptables
@@ -388,6 +390,7 @@ noto-fonts-cjk
 noto-fonts-emoji
 npm
 nss-mdns
+nvtop
 openssh
 opus
 os-prober
@@ -409,11 +412,13 @@ plasma-nm
 plasma-pa
 plasma-systemmonitor
 plasma-workspace
+plymouth
 polkit
 polkit-kde-agent
 powerdevil
 preloader-signed
 procps-ng
+protonplus
 psmisc
 purpose
 python
@@ -650,6 +655,7 @@ xorg-xrandr
 xorg-xrdb
 xorg-xwayland
 xz
+yt-dlp
 zed
 zip
 zram-generator
