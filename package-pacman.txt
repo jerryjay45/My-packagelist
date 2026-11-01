@@ -42,6 +42,7 @@ breeze
 breeze-cursors
 breeze-gtk
 breeze-icons
+breeze-plymouth
 btop
 btrfs-progs
 bzip2
@@ -376,6 +377,7 @@ linux-cachyos
 linux-cachyos-headers
 linux-firmware
 lsof
+man-db
 mangohud
 mesa
 meson
@@ -384,6 +386,7 @@ nasm
 neovim
 network-manager-applet
 networkmanager
+networkmanager-openvpn
 nm-connection-editor
 noto-fonts
 noto-fonts-cjk
@@ -413,8 +416,10 @@ plasma-pa
 plasma-systemmonitor
 plasma-workspace
 plymouth
+plymouth-kcm
 polkit
 polkit-kde-agent
+power-profiles-daemon
 powerdevil
 preloader-signed
 procps-ng
@@ -436,6 +441,7 @@ python-rich
 python-setuptools
 python-wheel
 python-yaml
+qbittorrent
 qca-qt6
 qcoro
 qemu-desktop
