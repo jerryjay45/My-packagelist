@@ -3,6 +3,12 @@ discord-rpc
 linutil-bin
 mcmojave-circle-icon-theme
 mcmojave-cursors
+mingw-w64-binutils
+mingw-w64-crt
+mingw-w64-gcc
+mingw-w64-headers
+mingw-w64-tools
+mingw-w64-winpthreads
 mojave-gtk-theme
 qt5-wayland-decorations
 qwhitesurgtkdecorations-qt6

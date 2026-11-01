@@ -97,7 +97,10 @@ It reports every package that is in neither the sync repos nor the AUR, and exit
 ## Notes on the package list
 
 - It targets an **AMD GPU**: it includes `mesa`, `vulkan-radeon` and `lib32-vulkan-radeon` (Steam needs a 32-bit Vulkan driver), plus `xf86-video-amdgpu`, `amdgpu_top` and `lact-git`. Swap these for the right driver packages on NVIDIA or Intel.
-- No kernel is listed. Install one (`linux`, `linux-zen`, `linux-cachyos`, …) during the base install; the script then installs the matching `-headers` package automatically when a DKMS package is in the list.
+- The kernel (`linux-cachyos` and `linux-cachyos-headers`) is in the list, so the **CachyOS repositories must be enabled** for it to install. If they aren't, the script skips those packages with a warning (and lists them in `failed-packages.txt`) instead of trying to build a kernel from the AUR. If you use a different kernel, remove those two lines. When a DKMS package is in the list, the script also installs the `-headers` package for every kernel that is already installed.
+- `plasma-login-manager` is the display manager (KDE's replacement for SDDM).
+- The virtualization set (`libvirt`, `virt-manager`, `virt-install`, `qemu-desktop`, `edk2-ovmf`, `dnsmasq`, `virtiofsd`) only installs the packages. Enable the service (`sudo systemctl enable --now libvirtd.socket`) and add yourself to the `libvirt` group yourself.
+- The `mingw-w64-*` cross-compiler packages are AUR packages. They come prebuilt with Chaotic-AUR; without it `yay` compiles them, and `mingw-w64-gcc` takes a long time.
 - Several `-git` packages come from Chaotic-AUR. If you decline the Chaotic prompt, `yay` builds them from source instead, which works but takes much longer.
 
 ## Requirements
