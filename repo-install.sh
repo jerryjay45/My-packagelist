@@ -226,6 +226,32 @@ install_group() {
     done
 }
 
+# Split $ALL_PACKAGES into:
+#   REPO_PKGS    - available in an enabled sync repo (incl. Chaotic/CachyOS, prebuilt)
+#   YAY_PKGS     - everything else, built from the AUR
+#   SKIPPED_PKGS - CachyOS kernels that are not in an enabled repo. These are
+#                  never sent to the AUR: a kernel build from source takes hours.
+split_packages() {
+    local name pkg
+    local -A in_repo=()
+    while IFS= read -r name; do
+        in_repo["$name"]=1
+    done < <(pacman -Slq)
+
+    REPO_PKGS=()
+    YAY_PKGS=()
+    SKIPPED_PKGS=()
+    while IFS= read -r pkg; do
+        if [[ -n "${in_repo[$pkg]:-}" ]]; then
+            REPO_PKGS+=("$pkg")
+        elif [[ "$pkg" == linux-cachyos* ]]; then
+            SKIPPED_PKGS+=("$pkg")
+        else
+            YAY_PKGS+=("$pkg")
+        fi
+    done <<< "$ALL_PACKAGES"
+}
+
 # DKMS modules need headers for every installed kernel.
 install_kernel_headers() {
     local f pkgbase headers
@@ -505,24 +531,14 @@ echo "${OK} Loaded $TOTAL_COUNT unique packages (pacman + AUR lists)." | tee -a 
 
 : > "$FAILED_LOG"
 
-# Split into "available in the enabled sync repos" vs "needs the AUR".
-# This takes the guesswork out of which list a package belongs to, and
-# means Chaotic/CachyOS packages are installed prebuilt when those repos are on.
-declare -A IN_REPO=()
-while IFS= read -r name; do
-    IN_REPO["$name"]=1
-done < <(pacman -Slq)
-
-REPO_PKGS=()
-YAY_PKGS=()
-while IFS= read -r pkg; do
-    if [[ -n "${IN_REPO[$pkg]:-}" ]]; then
-        REPO_PKGS+=("$pkg")
-    else
-        YAY_PKGS+=("$pkg")
-    fi
-done <<< "$ALL_PACKAGES"
+split_packages
 echo "${INFO} ${#REPO_PKGS[@]} from sync repos, ${#YAY_PKGS[@]} via yay (AUR)." | tee -a "$LOG"
+if [[ ${#SKIPPED_PKGS[@]} -gt 0 ]]; then
+    echo "${WARN} Skipping ${#SKIPPED_PKGS[@]} package(s) that only exist in the CachyOS repos, which are not enabled: ${SKIPPED_PKGS[*]}" | tee -a "$LOG"
+    echo "${NOTE} Re-run and answer 'y' to the CachyOS prompt (or enable the repos) to install them." | tee -a "$LOG"
+    printf '%s\n' "${SKIPPED_PKGS[@]}" >> "$FAILED_LOG"
+    FAILED=$((FAILED + ${#SKIPPED_PKGS[@]}))
+fi
 sleep 1
 
 # ============================================================
