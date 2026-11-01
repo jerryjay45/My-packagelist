@@ -83,6 +83,17 @@ If enabled, this step:
 
 This step assumes an AMD GPU. If run on a machine with an NVIDIA or Intel-only GPU, just answer "no" to the prompt.
 
+## Checking the lists for stale packages
+
+Package names change (for example, VLC and the KDE Frameworks 5 packages were split or renamed). To find entries that no longer exist, run this on an Arch install with the same repos enabled:
+
+```bash
+sudo pacman -Sy
+./check-lists.sh
+```
+
+It reports every package that is in neither the sync repos nor the AUR, and exits with status 1 if any are missing.
+
 ## Notes on the package list
 
 - It targets an **AMD GPU**: it includes `mesa`, `vulkan-radeon` and `lib32-vulkan-radeon` (Steam needs a 32-bit Vulkan driver), plus `xf86-video-amdgpu`, `amdgpu_top` and `lact-git`. Swap these for the right driver packages on NVIDIA or Intel.
