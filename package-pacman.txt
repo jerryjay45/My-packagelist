@@ -1,5 +1,4 @@
 a52dec
-ani-cli
 accountsservice
 adwaita-cursors
 adwaita-fonts
@@ -14,6 +13,7 @@ alsa-ucm-conf
 alsa-utils
 amdgpu_top
 ananicy-cpp
+ani-cli
 aom
 apple-fonts
 archlinux-keyring
@@ -327,7 +327,7 @@ lib32-libxv
 lib32-libxxf86vm
 lib32-llvm-libs
 lib32-lm_sensors
-lib32-mesa-tkg-git
+lib32-mesa
 lib32-ncurses
 lib32-nettle
 lib32-nspr
@@ -350,6 +350,7 @@ lib32-spirv-llvm-translator
 lib32-spirv-tools
 lib32-sqlite
 lib32-vulkan-icd-loader
+lib32-vulkan-radeon
 libjpeg-turbo
 libkscreen
 libksysguard
@@ -364,10 +365,8 @@ libxkbcommon
 linux-firmware
 lsof
 mangohud
-mcmojave-circle-icon-theme
-mcmojave-cursors
+mesa
 milou
-mojave-gtk-theme
 neovim
 network-manager-applet
 networkmanager
@@ -434,7 +433,6 @@ qt5-speech
 qt5-svg
 qt5-tools
 qt5-translations
-qt5-wayland-decorations
 qt5-webchannel
 qt5-webengine
 qt5-websockets
@@ -458,7 +456,6 @@ qt6-websockets
 qtforkawesome-qt6
 qtkeychain-qt6
 quazip-qt6
-qwhitesurgtkdecorations-qt6
 reflector
 ripgrep
 rsync
@@ -586,13 +583,11 @@ vlc-plugins-extra
 vlc-plugins-video-output
 vlc-plugins-visualization
 vulkan-icd-loader
+vulkan-radeon
 wayland
 webapp-manager
 wget
 which
-whitesur-gtk-theme
-whitesur-icon-theme
-whitesur-kde-theme
 wine
 wireless-regdb
 wireplumber
